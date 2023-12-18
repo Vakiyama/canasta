@@ -11,13 +11,14 @@ export type Player = {
 }
 
 export function purchaseFromPile({ pile, currentTurn, players }: Game) {
-    const card = pile.splice(0, 1);
-    players[currentTurn].hand.push(card[0])
+    const card = pile.splice(0, 1)[0];
+    players[currentTurn].hand.push(card)
+    return card;
 }
 
 export function purchaseFromJunkyard({ junkyard, currentTurn, players }: Game) {
-    const currentPlayer = players[currentTurn];
-    currentPlayer.hand = [...currentPlayer.hand, ...junkyard];
+    const player = players[currentTurn];
+    player.hand = [...player.hand, ...junkyard];
     junkyard = [];
 }
 
@@ -41,14 +42,16 @@ export function isValidSet(set: Set) {
     return true;
 }
 
-function removeCard(card: Card, currentPlayer: Player) {
-    const handCardIndex = currentPlayer.hand.findIndex((handCard) => {
-        return card.value === handCard.value &&
-            card.suit === handCard.suit;
-    });
-    currentPlayer.hand.splice(handCardIndex, 1);
+function isSameCard(cardA: Card, cardB: Card) {
+    return cardA.value === cardB.value && cardA.suit === cardB.suit;
 }
 
+function removeCard(card: Card, player: Player) {
+    const handCardIndex = player.hand.findIndex((handCard) => {
+        return isSameCard(card, handCard)
+    });
+    player.hand.splice(handCardIndex, 1);
+}
 
 /**
     * If valid set, moves cards in newSet to players sets from their hand
@@ -58,34 +61,37 @@ export function lowerSet(
     { players, currentTurn }: Game,
     newSet: Set,
 ) {
-    const currentPlayer = players[currentTurn];
+    const player = players[currentTurn];
     if (!isValidSet(newSet)) throw new Error('Invalid set');
-    for (const card of newSet.cards) removeCard(card, currentPlayer);
-    currentPlayer.sets.push(newSet);
-}
-
-function getDifferenceBetweenSets(
-    setA: Set,
-    setB: Set,
-) {
-    function getDifference(setA: Set, setB: Set) {
-        for (const card of setA.cards) {}
-    }
-    
-    if (setA.cards.length > setB.cards.length) {
-        return getDifference(setA, setB);
-    } else {
-        return getDifference(setB, setA);
-    }
+    for (const card of newSet.cards) removeCard(card, player);
+    player.sets.push(newSet);
 }
 
 // modify an existing set
 export function addToSet(
     { currentTurn, players }: Game,
-    oldSet: Set,
+    oldSetIndex: number,
     newSet: Set,
+    removedCards: Card[],
 ) {
-    if (!isValidSet(oldSet) || !isValidSet(newSet)) throw new Error('Invalid set');
-    const currentPlayer = players[currentTurn];
-    const cardsToRemove = getDifferenceBetweenSets(oldSet, newSet);     
+    if (!isValidSet(newSet)) throw new Error('Invalid set');
+    const player = players[currentTurn];
+    
+    player.hand = player.hand.filter(card => {
+        const index = removedCards.findIndex(cardToRemove => {
+            return isSameCard(card, cardToRemove);
+        })
+        if (index !== -1) {
+            removedCards.splice(index, 1);
+            return true;
+        }
+    })
+
+    player.sets[oldSetIndex] = newSet;
+}
+
+export function addToJunkyard({ currentTurn, players, junkyard }: Game, indexOfCard: number) {
+    const player = players[currentTurn];
+    const card = player.hand.splice(indexOfCard, 1)[0];
+    junkyard.push(card);
 }

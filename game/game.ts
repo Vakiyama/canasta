@@ -76,7 +76,7 @@ function getSuitValue(suit: Suit | null): number {
     }
 }
 
-function sortCardsInPlace(cards: Card[]): void {
+export function sortCardsInPlace(cards: Card[]): void {
     cards.sort((a, b) => {
         if (a.value === 'joker' || b.value === 'joker') return 0;
         return a.value - b.value;
